@@ -1,0 +1,59 @@
+name: test_documentation
+
+# CINTENT >> MANUAL_TRIGGER
+# on:
+#   push:
+#     branches:
+#       - mainline
+#       - releases/*
+on: [repository_dispatch, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  Test-Documentation:
+    name: Run Documentation Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout marqo repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          path: marqo
+
+      - name: Checkout marqo-base for requirements
+        uses: actions/checkout@v3
+        with:
+          repository: marqo-ai/marqo-base
+          path: marqo-base
+          fetch-depth: 0
+
+      # CINTENT >> INSERT_CINTENT
+      - uses: JavidDitty/setup-cintent@a606c80c34ec190c6a20dea33d6d58ddb6c4e0cc
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v5
+        with:
+          # CINTENT >> CHANGE_VERSION
+          # python-version: "3.9"
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install -r marqo-base/requirements/amd64-gpu-requirements.txt
+          pip install -r marqo/requirements.dev.txt
+
+      - name: Run Documentation Tests
+        run: |
+          export PYTHONPATH="./marqo/tests/integ_tests:./marqo/src:./marqo"
+          pytest marqo/tests/integ_tests/test_documentation.py
+
+      # CINTENT >> INSERT_CINTENT
+      - name: Upload CIntent Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ env.CINTENT_ARTIFACT_NAME }}
+          path: ${{ env.CINTENT_LOGS }}
